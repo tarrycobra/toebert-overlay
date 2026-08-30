@@ -5,90 +5,87 @@
 <title>toeberts live goal overlay</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { width:1920px; height:1080px; background:transparent; overflow:hidden;
-    font-family:'Bahnschrift','Segoe UI',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  html,body { width:1080px; height:1920px; background:transparent; overflow:hidden;
+    font-family:'Bahnschrift','Segoe UI',system-ui,sans-serif; -webkit-font-smoothing:antialiased; color:#fff; }
 
-  .panel {
-    position:absolute; top:40px; left:40px; width:340px; padding:16px 18px 18px;
-    border-radius:16px;
-    background:linear-gradient(158deg, rgba(23,24,32,0.97) 0%, rgba(12,13,18,0.98) 100%);
-    border:1px solid rgba(255,255,255,0.12);
-    box-shadow:0 16px 36px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10);
-  }
-  .hdr { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
-  .live { display:inline-flex; align-items:center; gap:6px; padding:4px 11px 4px 9px;
-    border-radius:999px; background:linear-gradient(135deg,var(--a1),var(--a2));
-    box-shadow:0 4px 12px var(--glow45); font-weight:700; font-size:13px; letter-spacing:1.5px; color:#fff;
-    transition:.3s; }
+  /* the game (a separate capture layer) shows through this transparent middle band.
+     everything above/below is a branded fill so there's no ugly black. */
+  .fill { position:absolute; left:0; width:1080px; overflow:hidden;
+    background:
+      radial-gradient(120% 80% at 18% 0%, rgba(var(--glow),.16), transparent 60%),
+      linear-gradient(180deg, #0c0d12 0%, #141621 100%); }
+  .topfill { top:0; height:var(--bandtop); display:flex; flex-direction:column; justify-content:flex-end;
+    padding:0 48px 30px; }
+  .topfill::after { content:''; position:absolute; left:0; bottom:0; width:100%; height:4px;
+    background:linear-gradient(90deg, transparent, var(--a1), var(--a2), transparent); opacity:.9; }
+  .botfill { top:var(--bandbottom); bottom:0; padding:28px 48px 0; }
+  .botfill::before { content:''; position:absolute; left:0; top:0; width:100%; height:4px;
+    background:linear-gradient(90deg, transparent, var(--a1), var(--a2), transparent); opacity:.9; }
+
+  /* header */
+  .hdr { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+  .live { display:inline-flex; align-items:center; gap:9px; padding:7px 16px 7px 13px; border-radius:999px;
+    background:linear-gradient(135deg,var(--a1),var(--a2)); box-shadow:0 6px 18px rgba(var(--glow),.45);
+    font-weight:700; font-size:19px; letter-spacing:2px; }
   .live.off { background:rgba(255,255,255,.14); box-shadow:none; color:rgba(255,255,255,.6); }
-  .live .d { width:6px; height:6px; border-radius:50%; background:#fff; box-shadow:0 0 6px #fff;
-    animation:pulse 1.4s ease-in-out infinite; }
+  .live .d { width:9px; height:9px; border-radius:50%; background:#fff; box-shadow:0 0 8px #fff; animation:pulse 1.4s infinite; }
   .live.off .d { animation:none; background:rgba(255,255,255,.5); box-shadow:none; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
-  .handle { font-size:21px; font-weight:700; letter-spacing:.3px; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.5); }
-  .viewers { margin-left:auto; display:inline-flex; align-items:center; gap:5px; font-size:13px; font-weight:600; color:rgba(255,255,255,.6); }
-  .viewers .eye { font-family:'Segoe UI Symbol'; font-size:12px; color:var(--a1); }
+  .handle { font-size:34px; font-weight:700; letter-spacing:.4px; text-shadow:0 2px 10px rgba(0,0,0,.5); }
+  .viewers { margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-size:22px; font-weight:600; color:rgba(255,255,255,.72); }
+  .viewers .eye { font-family:'Segoe UI Symbol'; font-size:19px; color:var(--a1); }
 
-  .row { margin-top:13px; }
-  .rowtop { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
-  .lbl { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; letter-spacing:.8px; color:#e9ebf1; }
-  .icon { font-family:'Segoe UI Symbol','Segoe UI'; font-size:13px;
+  /* goals */
+  .row { margin-top:16px; }
+  .rowtop { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px; }
+  .lbl { display:flex; align-items:center; gap:11px; font-size:24px; font-weight:600; letter-spacing:1px; color:#eef0f5; }
+  .icon { font-family:'Segoe UI Symbol','Segoe UI'; font-size:22px;
     background:linear-gradient(135deg,var(--a1),var(--a2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .num { font-size:13px; font-weight:700; letter-spacing:.5px; color:#fff; }
-  .num .goal { color:rgba(255,255,255,.4); font-weight:600; }
-  .bar { height:9px; border-radius:999px; background:rgba(255,255,255,.09); box-shadow:inset 0 1px 2px rgba(0,0,0,.5); overflow:hidden; }
-  .fill { height:100%; width:0%; border-radius:999px;
-    background:linear-gradient(90deg,var(--a1),var(--a2)); box-shadow:0 0 10px var(--glow60);
-    position:relative; transition:width .6s cubic-bezier(.2,.7,.2,1); }
-  .fill::after { content:''; position:absolute; inset:0 0 50% 0; border-radius:999px 999px 0 0;
-    background:linear-gradient(180deg, rgba(255,255,255,.30), transparent); }
+  .num { font-size:23px; font-weight:700; }
+  .num .goal { color:rgba(255,255,255,.42); font-weight:600; }
+  .bar { height:16px; border-radius:999px; background:rgba(255,255,255,.10); box-shadow:inset 0 1px 3px rgba(0,0,0,.5); overflow:hidden; }
+  .barfill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,var(--a1),var(--a2));
+    box-shadow:0 0 14px rgba(var(--glow),.6); position:relative; transition:width .6s cubic-bezier(.2,.7,.2,1); }
+  .barfill::after { content:''; position:absolute; inset:0 0 50% 0; border-radius:999px 999px 0 0;
+    background:linear-gradient(180deg, rgba(255,255,255,.3), transparent); }
 
-  .lt { position:absolute; left:40px; bottom:38px; height:48px; display:flex; align-items:center;
-    padding:0 22px 0 15px; border-radius:12px;
-    background:linear-gradient(158deg, rgba(23,24,32,0.97), rgba(12,13,18,0.98));
-    border:1px solid rgba(255,255,255,0.12);
-    box-shadow:0 14px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10); }
-  .cap { width:4px; height:24px; border-radius:2px; margin-right:14px;
-    background:linear-gradient(180deg,var(--a1),var(--a2)); box-shadow:0 0 10px var(--glow55); }
-  .gname { font-size:23px; font-weight:700; letter-spacing:1.5px; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.5); }
-  .sep { width:6px; height:6px; border-radius:50%; margin:0 14px;
-    background:linear-gradient(135deg,var(--a1),var(--a2)); box-shadow:0 0 6px var(--glow60); display:none; }
-  .capt { font-size:17px; font-weight:600; letter-spacing:.3px; color:rgba(255,255,255,.85); }
+  /* bottom: game name */
+  .gname-row { display:flex; align-items:center; }
+  .cap { width:6px; height:34px; border-radius:3px; margin-right:18px;
+    background:linear-gradient(180deg,var(--a1),var(--a2)); box-shadow:0 0 12px rgba(var(--glow),.55); }
+  .gname { font-size:44px; font-weight:700; letter-spacing:2px; text-shadow:0 2px 10px rgba(0,0,0,.5); }
+  .sep { width:8px; height:8px; border-radius:50%; margin:0 18px; background:linear-gradient(135deg,var(--a1),var(--a2)); display:none; }
+  .capt { font-size:26px; font-weight:600; color:rgba(255,255,255,.85); }
 
-  #dbg { position:absolute; right:12px; bottom:12px; width:520px; max-height:360px; overflow:auto;
-    background:rgba(0,0,0,.82); color:#8f8; font:11px/1.35 monospace; padding:8px 10px; border-radius:8px;
+  #dbg { position:absolute; left:12px; top:12px; width:640px; max-height:420px; overflow:auto;
+    background:rgba(0,0,0,.85); color:#8f8; font:13px/1.4 monospace; padding:10px 12px; border-radius:8px;
     white-space:pre-wrap; display:none; z-index:9; }
-  #dbg b { color:#fd6; }
 </style>
 </head>
 <body>
-  <div class="panel">
+  <div class="fill topfill">
     <div class="hdr">
       <span class="live off" id="livepill"><span class="d"></span><span id="livetxt">OFFLINE</span></span>
       <span class="handle" id="handle">@toeberts</span>
       <span class="viewers"><span class="eye">&#128065;</span><span id="viewers">0</span></span>
     </div>
     <div class="row">
-      <div class="rowtop">
-        <span class="lbl"><span class="icon">&#9733;</span>FOLLOWERS</span>
-        <span class="num"><span id="fnum">0</span> <span class="goal">/ <span id="fgoal">100</span></span></span>
-      </div>
-      <div class="bar"><div class="fill" id="ffill"></div></div>
+      <div class="rowtop"><span class="lbl"><span class="icon">&#9733;</span>FOLLOWERS</span>
+        <span class="num"><span id="fnum">0</span> <span class="goal">/ <span id="fgoal">100</span></span></span></div>
+      <div class="bar"><div class="barfill" id="ffill"></div></div>
     </div>
     <div class="row">
-      <div class="rowtop">
-        <span class="lbl"><span class="icon">&#9829;</span>LIKES</span>
-        <span class="num"><span id="lnum">0</span> <span class="goal">/ <span id="lgoal">10K</span></span></span>
-      </div>
-      <div class="bar"><div class="fill" id="lfill"></div></div>
+      <div class="rowtop"><span class="lbl"><span class="icon">&#9829;</span>LIKES</span>
+        <span class="num"><span id="lnum">0</span> <span class="goal">/ <span id="lgoal">10K</span></span></span></div>
+      <div class="bar"><div class="barfill" id="lfill"></div></div>
     </div>
   </div>
 
-  <div class="lt">
-    <div class="cap"></div>
-    <span class="gname" id="gname">ROBLOX</span>
-    <span class="sep" id="sep"></span>
-    <span class="capt" id="capt"></span>
+  <div class="fill botfill">
+    <div class="gname-row">
+      <div class="cap"></div><span class="gname" id="gname">ROBLOX</span>
+      <span class="sep" id="sep"></span><span class="capt" id="capt"></span>
+    </div>
   </div>
 
   <div id="dbg"></div>
@@ -97,7 +94,6 @@
   import { createWebSocketUrl, ClientCloseCode }
     from 'https://cdn.jsdelivr.net/npm/@eulerstream/euler-websocket-sdk/+esm';
 
-  // ---------- config from URL query params (key stays local, never in the repo) ----------
   const q = new URLSearchParams(location.search);
   const GAMES = {
     roblox:    { name:'ROBLOX',        a1:'#ff4d8d', a2:'#b455ff', glow:'255,77,141' },
@@ -111,22 +107,22 @@
   const lGoal = +(q.get('lgoal')||10000);
   const cap   = q.get('cap');
   const DEBUG = q.get('debug')==='1';
-
+  // band geometry (adjustable so we can nudge without editing the file)
+  const bandTop = +(q.get('bandtop')||540);        // px from top where the game band starts
+  const bandH   = +(q.get('bandh')|| Math.round(1080*9/16));  // 608, full-width 16:9
   const r = document.documentElement.style;
-  r.setProperty('--a1', g.a1); r.setProperty('--a2', g.a2);
-  r.setProperty('--glow45','rgba('+g.glow+',0.45)');
-  r.setProperty('--glow55','rgba('+g.glow+',0.55)');
-  r.setProperty('--glow60','rgba('+g.glow+',0.60)');
+  r.setProperty('--bandtop', bandTop+'px');
+  r.setProperty('--bandbottom', (bandTop+bandH)+'px');
+  r.setProperty('--a1', g.a1); r.setProperty('--a2', g.a2); r.setProperty('--glow', g.glow);
   document.getElementById('gname').textContent = g.name;
   document.getElementById('handle').textContent = '@'+user;
+  const fmt = n => (n=+n||0) >= 1000 ? (n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,'')+'K' : ''+n;
   document.getElementById('fgoal').textContent = fmt(fGoal);
   document.getElementById('lgoal').textContent = fmt(lGoal);
-  if (cap) { document.getElementById('capt').textContent = cap; document.getElementById('sep').style.display='inline-block'; }
+  if (cap){ document.getElementById('capt').textContent = cap; document.getElementById('sep').style.display='inline-block'; }
   if (DEBUG) document.getElementById('dbg').style.display='block';
 
-  // ---------- state ----------
-  let followers = 0, likes = 0, viewers = 0;
-  function fmt(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,'')+'K' : ''+n; }
+  let followers=0, likes=0, viewers=0;
   function render(){
     document.getElementById('viewers').textContent = fmt(viewers);
     document.getElementById('fnum').textContent = fmt(followers);
@@ -134,73 +130,34 @@
     document.getElementById('ffill').style.width = Math.min(100,(followers/(fGoal||1))*100)+'%';
     document.getElementById('lfill').style.width = Math.min(100,(likes/(lGoal||1))*100)+'%';
   }
-  function setLive(on){
-    const p=document.getElementById('livepill');
-    document.getElementById('livetxt').textContent = on?'LIVE':'OFFLINE';
-    p.classList.toggle('off', !on);
-  }
+  function setLive(on){ const p=document.getElementById('livepill');
+    document.getElementById('livetxt').textContent = on?'LIVE':'OFFLINE'; p.classList.toggle('off',!on); }
   render();
 
-  // ---------- debug log ----------
-  const seen = {};
-  function log(ev){
-    if(!DEBUG) return;
-    const t = eventType(ev) || '(no type)';
-    seen[t] = (seen[t]||0)+1;
-    const box=document.getElementById('dbg');
-    box.textContent = '@'+user+'  seen event types:\n' +
-      Object.entries(seen).map(([k,v])=>`  ${k}: ${v}`).join('\n') +
-      '\n\nlast message:\n' + JSON.stringify(ev, null, 1).slice(0,1400);
-    console.log('[overlay]', t, ev);
-  }
-
-  // ---------- defensive parsing ----------
+  const seen={};
   function eventType(ev){ return (ev?.type||ev?.event||ev?.method||ev?.name||ev?.eventName||'').toString(); }
-  function handleOne(ev){
-    log(ev);
-    const type = eventType(ev).toLowerCase();
-    const d = ev?.data || ev?.payload || ev || {};
-    if (type.includes('like')) {
-      const total = d.totalLikeCount ?? d.total_like_count ?? d.totalLikes ?? null;
-      if (total != null) likes = +total;
-      else { const c = d.likeCount ?? d.count ?? d.likes; if (c!=null) likes += +c; }
-      render();
-    } else if (type.includes('follow') || type.includes('social')) {
-      const action = d.action ?? d.socialAction;
-      const label = (d.label ?? d.displayType ?? '').toString().toLowerCase();
-      const isFollow = type.includes('follow') || String(action)==='1' || label.includes('follow');
-      if (isFollow) { followers++; render(); }
-    } else if (type.includes('roomuser') || type.includes('room_user') || type.includes('roomstats')) {
-      const v = d.viewerCount ?? d.viewer_count ?? d.total ?? d.totalUser ?? d.totalUserCount;
-      if (v != null) { viewers = +v; render(); }
-    }
-  }
-  function handle(msg){
-    if (Array.isArray(msg)) return msg.forEach(handleOne);
-    if (Array.isArray(msg?.events)) return msg.events.forEach(handleOne);
-    handleOne(msg);
-  }
+  function log(ev){ if(!DEBUG) return; const t=eventType(ev)||'(no type)'; seen[t]=(seen[t]||0)+1;
+    document.getElementById('dbg').textContent='@'+user+' event types:\n'+
+      Object.entries(seen).map(([k,v])=>'  '+k+': '+v).join('\n')+'\n\nlast:\n'+JSON.stringify(ev,null,1).slice(0,1600);
+    console.log('[overlay]',t,ev); }
+  function handleOne(ev){ log(ev); const type=eventType(ev).toLowerCase(); const d=ev?.data||ev?.payload||ev||{};
+    if(type.includes('like')){ const tot=d.totalLikeCount??d.total_like_count??d.totalLikes??null;
+      if(tot!=null) likes=+tot; else { const c=d.likeCount??d.count??d.likes; if(c!=null) likes+=+c; } render(); }
+    else if(type.includes('follow')||type.includes('social')){ const a=d.action??d.socialAction;
+      const lab=(d.label??d.displayType??'').toString().toLowerCase();
+      if(type.includes('follow')||String(a)==='1'||lab.includes('follow')){ followers++; render(); } }
+    else if(type.includes('roomuser')||type.includes('room_user')||type.includes('roomstats')){
+      const v=d.viewerCount??d.viewer_count??d.total??d.totalUser??d.totalUserCount; if(v!=null){ viewers=+v; render(); } } }
+  function handle(m){ if(Array.isArray(m)) return m.forEach(handleOne); if(Array.isArray(m?.events)) return m.events.forEach(handleOne); handleOne(m); }
 
-  // ---------- connect ----------
-  if (!key) {
-    document.getElementById('dbg').style.display='block';
-    document.getElementById('dbg').textContent =
-      'No API key. Add &key=YOUR_EULER_KEY&user='+user+' to the URL.';
-  } else {
-    connect();
-  }
-  function connect(){
-    const url = createWebSocketUrl({ uniqueId:'@'+user, jwtKey:key, features:{ bundleEvents:true } });
-    const ws = new WebSocket(url);
-    ws.addEventListener('open',  ()=> setLive(true));
-    ws.addEventListener('message', e => { try { handle(JSON.parse(e.data)); } catch(err){ if(DEBUG) console.warn(err, e.data); } });
-    ws.addEventListener('close', e => {
-      setLive(false);
-      if (e.code === ClientCloseCode?.NOT_LIVE) { /* streamer offline */ }
-      setTimeout(connect, 15000); // auto-reconnect
-    });
-    ws.addEventListener('error', ()=> setLive(false));
-  }
+  if(!key){ const b=document.getElementById('dbg'); b.style.display='block';
+    b.textContent='No API key. Add &key=YOUR_EULER_KEY&user='+user+' to the URL.'; }
+  else { (function connect(){ const url=createWebSocketUrl({uniqueId:'@'+user,jwtKey:key,features:{bundleEvents:true}});
+    const ws=new WebSocket(url);
+    ws.addEventListener('open',()=>setLive(true));
+    ws.addEventListener('message',e=>{ try{ handle(JSON.parse(e.data)); }catch(err){ if(DEBUG) console.warn(err,e.data); } });
+    ws.addEventListener('close',()=>{ setLive(false); setTimeout(connect,15000); });
+    ws.addEventListener('error',()=>setLive(false)); })(); }
 </script>
 </body>
 </html>
