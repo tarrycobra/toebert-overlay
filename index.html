@@ -81,6 +81,8 @@
   const fGoal = +(q.get('fgoal')||100);
   const lGoal = +(q.get('lgoal')||10000);
   const DEBUG = q.get('debug')==='1';
+  const sid = q.get('sessionId') || '';
+  const idc = q.get('idc') || '';
   if (q.get('bg')==='1') document.querySelector('.panel').classList.add('boxed');
   const r = document.documentElement.style;
   r.setProperty('--a1', g.a1); r.setProperty('--a2', g.a2); r.setProperty('--glow', g.glow);
@@ -117,14 +119,18 @@
       const v=d.viewerCount??d.viewer_count??d.total??d.totalUser??d.totalUserCount; if(v!=null){ viewers=+v; render(); } } }
   function handle(m){ if(Array.isArray(m)) return m.forEach(handleOne); if(Array.isArray(m?.events)) return m.events.forEach(handleOne); handleOne(m); }
 
-  if(!key){ const b=document.getElementById('dbg'); b.style.display='block';
-    b.textContent='No API key. Add &key=YOUR_EULER_KEY&user='+user+' to the URL.'; }
-  else { (function connect(){ const url=createWebSocketUrl({uniqueId:'@'+user,jwtKey:key,features:{bundleEvents:true}});
+  const dbgEl=document.getElementById('dbg');
+  function dstat(t){ if(DEBUG){ dbgEl.style.display='block'; dbgEl.textContent=t+'\n'+dbgEl.textContent; } }
+  if(!key){ dbgEl.style.display='block';
+    dbgEl.textContent='No API key. Add &key=YOUR_EULER_KEY&user='+user+' to the URL.'; }
+  else { (function connect(){ const opts={uniqueId:'@'+user,apiKey:key,features:{bundleEvents:true}};
+    if(sid) opts.sessionId=sid; if(idc) opts.ttTargetIdc=idc;
+    const url=createWebSocketUrl(opts);
     const ws=new WebSocket(url);
-    ws.addEventListener('open',()=>setLive(true));
+    ws.addEventListener('open',()=>{ setLive(true); dstat('WS OPEN — watching @'+user+(sid?' (session set)':' (no session)')); });
     ws.addEventListener('message',e=>{ try{ handle(JSON.parse(e.data)); }catch(err){ if(DEBUG) console.warn(err,e.data); } });
-    ws.addEventListener('close',()=>{ setLive(false); setTimeout(connect,15000); });
-    ws.addEventListener('error',()=>setLive(false)); })(); }
+    ws.addEventListener('close',ev=>{ setLive(false); dstat('WS CLOSE '+ev.code+' '+(ev.reason||'')); setTimeout(connect,15000); });
+    ws.addEventListener('error',()=>{ setLive(false); dstat('WS ERROR'); }); })(); }
 </script>
 </body>
 </html>
